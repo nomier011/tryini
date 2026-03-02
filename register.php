@@ -36,13 +36,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Hash password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
-                // Insert new user (default role is cashier)
-                $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'cashier')");
+                // Insert new user (pending approval)
+                $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, is_approved) VALUES (?, ?, ?, 'cashier', FALSE)");
                 if ($stmt) {
                     $stmt->bind_param("sss", $username, $email, $hashed_password);
                     
                     if ($stmt->execute()) {
-                        $success = "Registration successful! You can now <a href='login.php'>login here</a>";
+                        $success = "Registration successful! Your account is pending approval from a manager.";
                         $username = '';
                         $email = '';
                     } else {
@@ -214,38 +214,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: rgba(255, 255, 255, 0.6);
         }
 
-        .password-strength {
-            margin-top: 8px;
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .strength-bar {
-            height: 100%;
-            width: 0;
-            border-radius: 2px;
-            transition: all 0.3s;
-        }
-
-        .password-requirements {
-            margin-top: 8px;
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .requirement {
-            margin-bottom: 3px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .requirement.valid {
-            color: #6bff8d;
-        }
-
         .password-match {
             margin-top: 5px;
             font-size: 0.85rem;
@@ -296,6 +264,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: rgba(40, 167, 69, 0.2);
             color: #6bff8d;
             border-left: 4px solid #6bff8d;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .success-message i {
+            font-size: 2rem;
+        }
+
+        .btn-login-now {
+            background: rgba(255, 215, 0, 0.3);
+            color: #ffd700;
+            border: 1px solid #ffd700;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .btn-login-now:hover {
+            background: rgba(255, 215, 0, 0.4);
+            transform: translateY(-2px);
         }
 
         .login-link {
@@ -307,20 +301,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .login-link a {
-            color: rgba(255, 255, 255, 0.9);
+            color: #ffd700;
             text-decoration: none;
             font-weight: 600;
+            padding: 8px 15px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 5px;
+            transition: all 0.3s;
         }
 
         .login-link a:hover {
-            color: white;
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        .info-text {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <video autoplay muted loop id="video-background">
         <source src="videos/coffee-bg.mp4" type="video/mp4">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-steaming-hot-coffee-in-a-cup-2902-large.mp4" type="video/mp4">
     </video>
     
     <div class="video-overlay"></div>
@@ -345,10 +348,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php if ($success): ?>
             <div class="success-message">
                 <i class="fas fa-check-circle"></i>
-                <span><?php echo $success; ?></span>
+                <div style="margin: 10px 0;">
+                    <strong><?php echo $success; ?></strong>
+                </div>
+                <div class="info-text">
+                    You will receive an email once your account is approved.
+                </div>
+                <a href="login.php" class="btn-login-now">
+                    <i class="fas fa-sign-in-alt"></i> Go to Login
+                </a>
             </div>
         <?php endif; ?>
         
+        <?php if (!$success): ?>
         <form method="POST" action="" id="registerForm">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -372,20 +384,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <i class="fas fa-lock"></i>
                     <input type="password" id="password" name="password" class="form-control" required placeholder="Create password">
                 </div>
-                <div class="password-strength">
-                    <div class="strength-bar" id="strengthBar"></div>
-                </div>
-                <div class="password-requirements">
-                    <div class="requirement" id="reqLength">
-                        <i class="far fa-circle"></i> At least 6 characters
-                    </div>
-                    <div class="requirement" id="reqUpper">
-                        <i class="far fa-circle"></i> Contains uppercase
-                    </div>
-                    <div class="requirement" id="reqNumber">
-                        <i class="far fa-circle"></i> Contains number
-                    </div>
-                </div>
             </div>
             
             <div class="form-group">
@@ -401,64 +399,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <i class="fas fa-user-plus"></i> Register
             </button>
         </form>
+        <?php endif; ?>
         
         <div class="login-link">
-            Already have an account? <a href="login.php">Login here</a>
+            Already have an account? <a href="login.php"><i class="fas fa-sign-in-alt"></i> Login here</a>
         </div>
     </div>
 
     <script>
         const passwordInput = document.getElementById('password');
         const confirmInput = document.getElementById('confirm_password');
-        const strengthBar = document.getElementById('strengthBar');
         const passwordMatch = document.getElementById('passwordMatch');
         
-        passwordInput.addEventListener('input', checkStrength);
         confirmInput.addEventListener('input', checkMatch);
-        
-        function checkStrength() {
-            const password = passwordInput.value;
-            let strength = 0;
-            
-            if (password.length >= 6) {
-                strength += 33;
-                document.getElementById('reqLength').classList.add('valid');
-                document.getElementById('reqLength').innerHTML = '<i class="fas fa-check-circle"></i> At least 6 characters';
-            } else {
-                document.getElementById('reqLength').classList.remove('valid');
-                document.getElementById('reqLength').innerHTML = '<i class="far fa-circle"></i> At least 6 characters';
-            }
-            
-            if (/[A-Z]/.test(password)) {
-                strength += 33;
-                document.getElementById('reqUpper').classList.add('valid');
-                document.getElementById('reqUpper').innerHTML = '<i class="fas fa-check-circle"></i> Contains uppercase';
-            } else {
-                document.getElementById('reqUpper').classList.remove('valid');
-                document.getElementById('reqUpper').innerHTML = '<i class="far fa-circle"></i> Contains uppercase';
-            }
-            
-            if (/[0-9]/.test(password)) {
-                strength += 34;
-                document.getElementById('reqNumber').classList.add('valid');
-                document.getElementById('reqNumber').innerHTML = '<i class="fas fa-check-circle"></i> Contains number';
-            } else {
-                document.getElementById('reqNumber').classList.remove('valid');
-                document.getElementById('reqNumber').innerHTML = '<i class="far fa-circle"></i> Contains number';
-            }
-            
-            strengthBar.style.width = strength + '%';
-            
-            if (strength < 33) {
-                strengthBar.style.background = '#ff4757';
-            } else if (strength < 66) {
-                strengthBar.style.background = '#ffa502';
-            } else {
-                strengthBar.style.background = '#2ed573';
-            }
-            
-            checkMatch();
-        }
         
         function checkMatch() {
             if (confirmInput.value === '') {

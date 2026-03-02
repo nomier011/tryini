@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check if connection exists
     if (isset($conn) && $conn) {
         // Fetch user from database
-        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
+        $stmt = $conn->prepare("SELECT id, username, password, role, is_approved FROM users WHERE username = ?");
         if ($stmt) {
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -27,27 +27,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows > 0) {
                 $user = $result->fetch_assoc();
                 
-                // Verify password
-                if (password_verify($password, $user['password'])) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role'] = $user['role'];
-                    
-                    // Update last login
-                    $update = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-                    if ($update) {
-                        $update->bind_param("i", $user['id']);
-                        $update->execute();
-                        $update->close();
-                    }
-                    
-                    // Log activity
-                    logActivity($conn, $user['id'], 'login', 'User logged in');
-                    
-                    header("Location: dashboard.php");
-                    exit();
+                // Check if user is approved
+                if (!$user['is_approved']) {
+                    $error = "Your account is pending approval from a manager. Please try again later.";
                 } else {
-                    $error = "Invalid password.";
+                    // Verify password
+                    if (password_verify($password, $user['password'])) {
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['role'] = $user['role'];
+                        
+                        // Update last login
+                        $update = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                        if ($update) {
+                            $update->bind_param("i", $user['id']);
+                            $update->execute();
+                            $update->close();
+                        }
+                        
+                        // ONLY log cashier login in cashier_sessions table
+                        if ($user['role'] == 'cashier') {
+                            logCashierLogin($conn, $user['id']);
+                        }
+                        
+                        header("Location: dashboard.php");
+                        exit();
+                    } else {
+                        $error = "Invalid password.";
+                    }
                 }
             } else {
                 $error = "Username not found.";
@@ -69,6 +76,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Login | Coffee POS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Your existing CSS here - keep as is */
         * {
             margin: 0;
             padding: 0;
@@ -349,8 +357,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <i class="fas fa-sign-in-alt"></i> Sign In
             </button>
         </form>
-        
-        
+
         
         <div class="register-link">
             Don't have an account? <a href="register.php">Register here</a>

@@ -41,12 +41,21 @@ if ($orders->num_rows > 0) {
     <title>My Sales | Coffee POS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+
         body {
-            background: #000;
             min-height: 100vh;
             padding: 20px;
+            background: #000;
             position: relative;
+            overflow-x: hidden;
         }
+
         #video-background {
             position: fixed;
             top: 0;
@@ -56,6 +65,7 @@ if ($orders->num_rows > 0) {
             object-fit: cover;
             z-index: -2;
         }
+
         .video-overlay {
             position: fixed;
             top: 0;
@@ -65,10 +75,13 @@ if ($orders->num_rows > 0) {
             background: rgba(0,0,0,0.4);
             z-index: -1;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 15px;
         }
+
         .header {
             display: flex;
             justify-content: space-between;
@@ -78,19 +91,30 @@ if ($orders->num_rows > 0) {
             background: rgba(255,255,255,0.1);
             border-radius: 20px;
             backdrop-filter: blur(15px);
+            flex-wrap: wrap;
+            gap: 20px;
         }
+
         .brand {
             display: flex;
             align-items: center;
             gap: 20px;
+            flex-wrap: wrap;
         }
+
         .brand a {
             color: white;
             text-decoration: none;
             padding: 10px 20px;
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
+            transition: all 0.3s;
         }
+
+        .brand a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
         .logo {
             width: 60px;
             height: 60px;
@@ -102,66 +126,159 @@ if ($orders->num_rows > 0) {
             color: white;
             font-size: 28px;
         }
+
         .brand-text h1 {
             color: white;
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 4vw, 2rem);
         }
+
         .filter-tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
+
         .filter-tab {
             padding: 10px 20px;
             background: rgba(255,255,255,0.1);
             border-radius: 10px;
             color: white;
             text-decoration: none;
+            transition: all 0.3s;
         }
+
+        .filter-tab:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
         .filter-tab.active {
             background: rgba(255,215,0,0.3);
             border: 1px solid #ffd700;
+            color: #ffd700;
         }
+
         .summary-card {
             background: rgba(255,255,255,0.1);
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 20px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             backdrop-filter: blur(15px);
         }
+
         .summary-item {
             text-align: center;
         }
+
         .summary-label {
             color: rgba(255,255,255,0.8);
             margin-bottom: 5px;
+            font-size: 0.9rem;
         }
+
         .summary-value {
             color: #ffd700;
             font-size: 2rem;
             font-weight: 700;
         }
+
+        .summary-value::before {
+            content: '₱';
+            margin-right: 5px;
+        }
+
+        .summary-value.no-currency::before {
+            content: none;
+        }
+
         .orders-table {
             width: 100%;
             background: rgba(255,255,255,0.1);
             border-radius: 20px;
             padding: 20px;
             backdrop-filter: blur(15px);
+            overflow-x: auto;
         }
-        .orders-table th, .orders-table td {
+
+        .orders-table table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .orders-table th {
+            color: rgba(255,255,255,0.9);
+            text-align: left;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .orders-table td {
             color: white;
             padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: rgba(255,193,7,0.2);
+            color: #ffc107;
+        }
+
+        .status-preparing {
+            background: rgba(33,150,243,0.2);
+            color: #2196F3;
+        }
+
+        .status-served {
+            background: rgba(76,175,80,0.2);
+            color: #4CAF50;
+        }
+
+        .status-cancelled {
+            background: rgba(244,67,54,0.2);
+            color: #f44336;
+        }
+
+        .view-btn {
+            color: #ffd700;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            background: rgba(255,215,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .view-btn:hover {
+            background: rgba(255,215,0,0.2);
+        }
+
+        .no-data {
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .summary-card {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <video autoplay muted loop id="video-background">
-        <source src="videos/coffee-bg.mp4" type="video/mp4">
+        <source src="videos/coffee-bg2.mp4" type="video/mp4">
     </video>
     <div class="video-overlay"></div>
     
@@ -184,42 +301,58 @@ if ($orders->num_rows > 0) {
         <div class="summary-card">
             <div class="summary-item">
                 <div class="summary-label">Orders</div>
-                <div class="summary-value"><?php echo $order_count; ?></div>
+                <div class="summary-value no-currency"><?php echo $order_count; ?></div>
             </div>
             <div class="summary-item">
                 <div class="summary-label">Total Sales</div>
-                <div class="summary-value">$<?php echo number_format($total_sales,2); ?></div>
+                <div class="summary-value"><?php echo number_format($total_sales,2); ?></div>
             </div>
             <div class="summary-item">
                 <div class="summary-label">Average</div>
-                <div class="summary-value">$<?php echo $order_count>0?number_format($total_sales/$order_count,2):'0.00'; ?></div>
+                <div class="summary-value"><?php echo $order_count>0?number_format($total_sales/$order_count,2):'0.00'; ?></div>
             </div>
         </div>
         
-        <table class="orders-table">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Customer</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Time</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($order = $orders->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo $order['order_number']; ?></td>
-                    <td><?php echo htmlspecialchars($order['customer_name']??'Walk-in'); ?></td>
-                    <td><?php echo $order['item_count']; ?> items</td>
-                    <td>$<?php echo number_format($order['total_amount'],2); ?></td>
-                    <td><?php echo date('h:i A', strtotime($order['created_at'])); ?></td>
-                    <td><a href="receipt.php?order_id=<?php echo $order['id']; ?>" style="color:#ffd700;">Receipt</a></td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+        <div class="orders-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($orders && $orders->num_rows > 0): ?>
+                        <?php while($order = $orders->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo $order['order_number']; ?></td>
+                            <td><?php echo htmlspecialchars($order['customer_name']??'Walk-in'); ?></td>
+                            <td><?php echo $order['item_count']; ?> items</td>
+                            <td>₱<?php echo number_format($order['total_amount'],2); ?></td>
+                            <td><?php echo ucfirst($order['payment_method']); ?></td>
+                            <td>
+                                <span class="status-badge status-<?php echo $order['order_status']; ?>">
+                                    <?php echo ucfirst($order['order_status']); ?>
+                                </span>
+                            </td>
+                            <td><?php echo date('h:i A', strtotime($order['created_at'])); ?></td>
+                            <td><a href="receipt.php?order_id=<?php echo $order['id']; ?>" class="view-btn"><i class="fas fa-print"></i> Receipt</a></td>
+                        </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="8" class="no-data">No sales found for this period</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>
