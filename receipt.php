@@ -35,6 +35,12 @@ $items = $conn->query("
     <title>Receipt | Coffee POS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             background: #000;
             min-height: 100vh;
@@ -67,7 +73,7 @@ $items = $conn->query("
 
         .receipt {
             background: white;
-            max-width: 400px;
+            max-width: 450px;
             width: 100%;
             padding: 30px;
             border-radius: 20px;
@@ -149,21 +155,34 @@ $items = $conn->query("
             font-size: 0.9rem;
         }
 
-        .print-btn {
-            background: #000;
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            width: 100%;
-            font-size: 1.1rem;
-            cursor: pointer;
+        /* Button container - FIXED ALIGNMENT */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             margin-top: 20px;
+        }
+
+        .print-btn, .new-order-btn, .dashboard-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            transition: all 0.3s;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .print-btn {
+            background: #000;
+            color: white;
         }
 
         .print-btn:hover {
@@ -171,23 +190,24 @@ $items = $conn->query("
             transform: translateY(-2px);
         }
 
-        .back-btn {
-            background: #666;
+        .new-order-btn {
+            background: #4CAF50;
             color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 10px;
-            width: 100%;
-            font-size: 1rem;
-            margin-top: 10px;
-            text-decoration: none;
-            display: block;
-            text-align: center;
-            transition: all 0.3s;
         }
 
-        .back-btn:hover {
+        .new-order-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .dashboard-btn {
+            background: #666;
+            color: white;
+        }
+
+        .dashboard-btn:hover {
             background: #888;
+            transform: translateY(-2px);
         }
 
         .status-badge {
@@ -200,16 +220,26 @@ $items = $conn->query("
 
         .status-pending {
             background: rgba(255,193,7,0.2);
-            color: #ffc107;
+            color: #856404;
+        }
+
+        .status-preparing {
+            background: rgba(33,150,243,0.2);
+            color: #0c5460;
+        }
+
+        .status-served {
+            background: rgba(76,175,80,0.2);
+            color: #155724;
         }
 
         .status-cancelled {
             background: rgba(244,67,54,0.2);
-            color: #f44336;
+            color: #721c24;
         }
 
         @media print {
-            .print-btn, .back-btn, #video-background, .video-overlay {
+            .print-btn, .new-order-btn, .dashboard-btn, .button-container, #video-background, .video-overlay {
                 display: none;
             }
             body {
@@ -219,6 +249,22 @@ $items = $conn->query("
             .receipt {
                 box-shadow: none;
                 padding: 15px;
+                max-width: 100%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .receipt {
+                padding: 20px;
+            }
+            
+            .receipt-title {
+                font-size: 1.5rem;
+            }
+            
+            .print-btn, .new-order-btn, .dashboard-btn {
+                padding: 12px;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -234,6 +280,7 @@ $items = $conn->query("
             <div class="receipt-title">☕ Coffee Shop</div>
             <div class="shop-info">123 Coffee Street</div>
             <div class="shop-info">Tel: (555) 123-4567</div>
+            <div class="shop-info">VAT Reg TIN: 123-456-789</div>
         </div>
         
         <div class="receipt-info">
@@ -249,6 +296,11 @@ $items = $conn->query("
         </div>
         
         <div class="receipt-items">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #ccc; font-weight: bold;">
+                <span style="flex: 2;">Item</span>
+                <span style="flex: 1; text-align: center;">Qty</span>
+                <span style="flex: 1; text-align: right;">Total</span>
+            </div>
             <?php while($item = $items->fetch_assoc()): ?>
             <div class="receipt-item">
                 <span class="item-name"><?php echo htmlspecialchars($item['name']); ?></span>
@@ -256,7 +308,7 @@ $items = $conn->query("
                 <span class="item-price">₱<?php echo number_format($item['subtotal'], 2); ?></span>
             </div>
             <?php if(!empty($item['notes'])): ?>
-            <div style="font-size: 0.8rem; color: #666; margin-bottom: 5px; padding-left: 10px;">
+            <div style="font-size: 0.75rem; color: #666; margin-bottom: 5px; padding-left: 10px;">
                 <i class="fas fa-comment"></i> <?php echo htmlspecialchars($item['notes']); ?>
             </div>
             <?php endif; ?>
@@ -264,7 +316,7 @@ $items = $conn->query("
         </div>
         
         <div class="receipt-total">
-            <span>Total</span>
+            <span>TOTAL AMOUNT</span>
             <span>₱<?php echo number_format($order['total_amount'], 2); ?></span>
         </div>
         
@@ -274,7 +326,7 @@ $items = $conn->query("
         </div>
         
         <?php if($order['order_status'] == 'cancelled'): ?>
-        <div style="margin-top: 15px; padding: 10px; background: rgba(244,67,54,0.1); border-radius: 5px; color: #f44336;">
+        <div style="margin-top: 15px; padding: 10px; background: rgba(244,67,54,0.1); border-radius: 5px; color: #721c24;">
             <i class="fas fa-ban"></i> This order has been cancelled
         </div>
         <?php endif; ?>
@@ -282,21 +334,25 @@ $items = $conn->query("
         <div class="receipt-footer">
             <p>Thank you for your business!</p>
             <p>Please come again</p>
+            <p style="font-size: 0.8rem; margin-top: 10px;">This serves as an official receipt</p>
         </div>
         
-        <button onclick="window.print()" class="print-btn">
-            <i class="fas fa-print"></i> Print Receipt
-        </button>
-        
-        <?php if($_SESSION['role'] == 'cashier'): ?>
-        <a href="new-order.php" class="back-btn">
-            <i class="fas fa-plus"></i> New Order
-        </a>
-        <?php else: ?>
-        <a href="dashboard.php" class="back-btn">
-            <i class="fas fa-home"></i> Dashboard
-        </a>
-        <?php endif; ?>
+        <!-- Button Container - Fixed alignment -->
+        <div class="button-container">
+            <button onclick="window.print()" class="print-btn">
+                <i class="fas fa-print"></i> Print Receipt
+            </button>
+            
+            <?php if($_SESSION['role'] == 'cashier'): ?>
+            <a href="new-order.php" class="new-order-btn">
+                <i class="fas fa-plus-circle"></i> New Order
+            </a>
+            <?php else: ?>
+            <a href="dashboard.php" class="dashboard-btn">
+                <i class="fas fa-home"></i> Back to Dashboard
+            </a>
+            <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>
